@@ -1,0 +1,5 @@
+C:/my-github-project/EdgeXGuard/software/client/build/CMakeFiles/EdgeXGuardClient.dir
+C:/my-github-project/EdgeXGuard/software/client/build/CMakeFiles/edit_cache.dir
+C:/my-github-project/EdgeXGuard/software/client/build/CMakeFiles/rebuild_cache.dir
+C:/my-github-project/EdgeXGuard/software/client/build/CMakeFiles/EdgeXGuardClient_autogen_timestamp_deps.dir
+C:/my-github-project/EdgeXGuard/software/client/build/CMakeFiles/EdgeXGuardClient_autogen.dir

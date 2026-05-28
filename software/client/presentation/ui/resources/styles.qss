@@ -1,0 +1,58 @@
+/* presentation/ui/resources/styles.qss */
+
+/* 全局样式 */
+QWidget {
+    background-color: #1E1E2E;
+    color: #E0E0E0;
+    font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+}
+
+/* 左侧菜单 */
+QListWidget {
+    background-color: #2D2D3D;
+    border: none;
+    outline: none;
+    font-size: 14px;
+    padding-top: 20px;
+}
+
+QListWidget::item {
+    padding: 12px 16px;
+    border-radius: 8px;
+    margin: 4px 8px;
+}
+
+QListWidget::item:selected {
+    background-color: #4A90E2;
+    color: white;
+}
+
+QListWidget::item:hover:!selected {
+    background-color: #3D3D4D;
+}
+
+/* 滚动条 */
+QScrollBar:vertical {
+    background-color: #2D2D3D;
+    width: 10px;
+    border-radius: 5px;
+}
+
+QScrollBar::handle:vertical {
+    background-color: #4A90E2;
+    border-radius: 5px;
+    min-height: 30px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background-color: #6AA8F0;
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0;
+}
+
+/* 占位页面 */
+QLabel {
+    background-color: #1E1E2E;
+}
