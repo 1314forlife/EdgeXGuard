@@ -13,6 +13,21 @@ find_package(Qt6 REQUIRED COMPONENTS Core Widgets Network OpenGL OpenGLWidgets)
 set(FFMPEG_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/ffmpeg)
 set(HNSWLIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/hnswlib) # 【★新增】向量索引库路径
 
+set(PAHO_MQTT_INCLUDE_DIR C:/msys64/mingw64/include)
+set(PAHO_MQTT_LIB_DIR C:/msys64/mingw64/lib)
+
+# ============= ONVIF 配置 ==============
+set(ONVIF_GENERATED_DIR ${CMAKE_CURRENT_SOURCE_DIR}/infrastructure/network/onvif/generated)
+set(ONVIF_STDSOAP2_DIR ${CMAKE_CURRENT_SOURCE_DIR}/infrastructure/network/onvif/stdsoap2)
+
+# ONVIF 源文件（如果文件存在）
+if(EXISTS ${ONVIF_GENERATED_DIR})
+    file(GLOB ONVIF_SOURCES ${ONVIF_GENERATED_DIR}/*.cpp)
+    file(GLOB ONVIF_HEADERS ${ONVIF_GENERATED_DIR}/*.h ${ONVIF_GENERATED_DIR}/*.nsmap)
+    list(APPEND SOURCES ${ONVIF_SOURCES})
+    list(APPEND HEADERS ${ONVIF_HEADERS})
+endif()
+
 # ==================== 源文件 ====================
 set(SOURCES
     main.cpp
@@ -147,6 +162,9 @@ add_executable(EdgeXGuardClient ${SOURCES} ${HEADERS} ${RESOURCES}
     presentation/viewmodel/perimeter_rules/PerimeterRulesPage.cpp
     presentation/ui/modules/perimeter_rules/PerimeterRulesPage.h
     presentation/ui/modules/perimeter_rules/PerimeterRulesPage.cpp
+    infrastructure/network/mqtt/mqtt_network_service.cpp infrastructure/network/mqtt/mqtt_network_service.h
+    infrastructure/network/onvif/onvif_client.h
+    infrastructure/network/onvif/onvif_client.cpp
 )
 
 # ==================== 包含目录 ====================
@@ -161,6 +179,9 @@ target_include_directories(EdgeXGuardClient PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/core
     ${FFMPEG_DIR}/include
     ${HNSWLIB_DIR} # 【★新增】让整个工程在编译时能成功包含并认出 hnswlib 相关的头文件
+    ${PAHO_MQTT_INCLUDE_DIR}
+    ${ONVIF_GENERATED_DIR}
+    ${ONVIF_STDSOAP2_DIR}
 )
 
 # ==================== 链接库 ====================
@@ -174,4 +195,7 @@ target_link_libraries(EdgeXGuardClient
     ${FFMPEG_DIR}/lib/libavformat.dll.a
     ${FFMPEG_DIR}/lib/libavutil.dll.a
     ${FFMPEG_DIR}/lib/libswscale.dll.a
+    ${PAHO_MQTT_LIB_DIR}/libpaho-mqttpp3.a
+    ${PAHO_MQTT_LIB_DIR}/libpaho-mqtt3a.dll.a
+    libgsoap++.a
 )
