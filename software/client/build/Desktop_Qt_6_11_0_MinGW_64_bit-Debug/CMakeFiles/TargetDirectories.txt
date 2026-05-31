@@ -1,5 +1,0 @@
-C:/my-github-project/EdgeXGuard/software/client/build/Desktop_Qt_6_11_0_MinGW_64_bit-Debug/CMakeFiles/EdgeXGuardClient.dir
-C:/my-github-project/EdgeXGuard/software/client/build/Desktop_Qt_6_11_0_MinGW_64_bit-Debug/CMakeFiles/edit_cache.dir
-C:/my-github-project/EdgeXGuard/software/client/build/Desktop_Qt_6_11_0_MinGW_64_bit-Debug/CMakeFiles/rebuild_cache.dir
-C:/my-github-project/EdgeXGuard/software/client/build/Desktop_Qt_6_11_0_MinGW_64_bit-Debug/CMakeFiles/EdgeXGuardClient_autogen_timestamp_deps.dir
-C:/my-github-project/EdgeXGuard/software/client/build/Desktop_Qt_6_11_0_MinGW_64_bit-Debug/CMakeFiles/EdgeXGuardClient_autogen.dir
