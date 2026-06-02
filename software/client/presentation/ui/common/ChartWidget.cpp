@@ -5,23 +5,24 @@
 #include <QMouseEvent>
 #include <QFontMetrics>
 #include <QPainterPath>
+#include <QDebug>
 #include <algorithm>
 #include <cmath>
 
 ChartWidget::ChartWidget(QWidget *parent)
     : QWidget(parent)
-    , m_maxDataPoints(60)
-    , m_minTemp(0)
-    , m_maxTemp(50)
-    , m_minHumi(0)
-    , m_maxHumi(100)
-    , m_showTemperature(true)
-    , m_showHumidity(true)
-    , m_title("温湿度历史曲线")
-    , m_zoomLevel(1.0f)
-    , m_offset(0)
-    , m_isDragging(false)
-    , m_needsRedraw(true)
+          ,m_maxDataPoints(60)
+          , m_minTemp(0)
+          , m_maxTemp(50)
+          , m_minHumi(0)
+          , m_maxHumi(100)
+          , m_showTemperature(true)
+          , m_showHumidity(true)
+          , m_title("温湿度历史曲线")
+          , m_zoomLevel(1.0f)
+          , m_offset(0)
+          , m_isDragging(false)
+          , m_needsRedraw(true)
 {
     setMinimumHeight(250);
     setBackgroundRole(QPalette::Base);
@@ -52,11 +53,14 @@ void ChartWidget::setTemperatureData(const QVector<float>& data)
 void ChartWidget::setHumidityData(const QVector<int>& data)
 {
     m_humiData = data;
-    qDebug() << "setHumidityData - size:" << m_humiData.size();
+
+    // 💡 核心修正 1：绝杀越界野值！用 mid() 代替 first() 进行安全控杀
     if (!m_humiData.isEmpty()) {
-        qDebug() << "First 5 values:" << m_humiData.first(5);
+        int printCount = std::min(5, (int)m_humiData.size());
+        qDebug() << "setHumidityData - size:" << m_humiData.size()
+                 << " | First 5 values safely:" << m_humiData.mid(0, printCount);
     }
-    m_humiData = data;
+
     if (m_humiData.size() > m_maxDataPoints) {
         m_humiData = m_humiData.mid(m_humiData.size() - m_maxDataPoints);
     }
@@ -212,10 +216,10 @@ void ChartWidget::updatePixmap()
     QPainter painter(&m_pixmap);
     painter.setRenderHint(QPainter::Antialiasing, true);
 
-    int margin_left = 60;   // 增加左边距
-    int margin_right = 50;  // 增加右边距
-    int margin_top = 45;    // 增加上边距
-    int margin_bottom = 35; // 增加下边距
+    int margin_left = 60;
+    int margin_right = 50;
+    int margin_top = 45;
+    int margin_bottom = 35;
 
     int chartWidth = width() - margin_left - margin_right;
     int chartHeight = height() - margin_top - margin_bottom;
@@ -230,10 +234,10 @@ void ChartWidget::updatePixmap()
     painter.setFont(titleFont);
     painter.drawText(QRect(margin_left, 8, chartWidth, 25), Qt::AlignCenter, m_title);
 
-    // 绘制网格
+    // 💡 核心修正 2：全自动对齐坐标，把外边距传进去控杀坐标偏移
     drawGrid(painter, chartWidth, chartHeight);
 
-    // ===== 绘制温度曲线（红色）=====
+    // ===== 绘制温度曲线 =====
     if (m_showTemperature && m_tempData.size() >= 2) {
         QPainterPath path;
         bool first = true;
@@ -254,15 +258,13 @@ void ChartWidget::updatePixmap()
         painter.drawPath(path);
     }
 
-    // ===== 绘制湿度曲线（蓝色）- 修复版 =====
+    // ===== 绘制湿度曲线 =====
     if (m_showHumidity && m_humiData.size() >= 2) {
         QPainterPath path;
         bool first = true;
 
         for (int i = 0; i < m_humiData.size(); ++i) {
             float x = margin_left + ((float)i / (m_maxDataPoints - 1)) * chartWidth;
-
-            // 计算 Y 位置
             float range = m_maxHumi - m_minHumi;
             float yPercent = (m_humiData[i] - m_minHumi) / range;
             yPercent = std::max(0.0f, std::min(1.0f, yPercent));
@@ -282,6 +284,7 @@ void ChartWidget::updatePixmap()
     drawLegend(painter, width(), height());
 }
 
+// 💡 核心修正 3：重构网格绘制逻辑，彻底消除图表自缩放引起的死循环
 void ChartWidget::drawGrid(QPainter& painter, int width, int height)
 {
     painter.save();
@@ -290,36 +293,39 @@ void ChartWidget::drawGrid(QPainter& painter, int width, int height)
     font.setPointSize(8);
     painter.setFont(font);
 
-    // 垂直线（时间轴）
+    int margin_left = 60;
+    int margin_top = 45;
+
+    // 垂直线
     for (int i = 0; i <= 6; ++i) {
-        int x = 50 + i * width / 6;
+        int x = margin_left + i * width / 6;
         painter.setPen(QPen(QColor(230, 230, 230), 1));
-        painter.drawLine(x, 40, x, 40 + height);
+        painter.drawLine(x, margin_top, x, margin_top + height);
 
         int seconds = (m_maxDataPoints / 6) * i;
         painter.setPen(Qt::gray);
-        painter.drawText(QRect(x - 20, 40 + height + 5, 40, 15), Qt::AlignCenter, QString("%1s").arg(seconds));
+        painter.drawText(QRect(x - 20, margin_top + height + 5, 40, 15), Qt::AlignCenter, QString("%1s").arg(seconds));
     }
 
-    // 水平线（Y轴）
+    // 水平线
     for (int i = 0; i <= 4; ++i) {
-        int y = 40 + i * height / 4;
+        int y = margin_top + i * height / 4;
         painter.setPen(QPen(QColor(230, 230, 230), 1));
-        painter.drawLine(50, y, 50 + width, y);
+        painter.drawLine(margin_left, y, margin_left + width, y);
 
-        // 温度标签（左侧）
+        // 左侧温度
         float temp = m_maxTemp - (m_maxTemp - m_minTemp) * i / 4.0f;
         painter.setPen(QColor(239, 68, 68));
-        painter.drawText(QRect(5, y - 8, 40, 16), Qt::AlignRight, QString("%1°C").arg(temp, 0, 'f', 1));
+        painter.drawText(QRect(margin_left - 55, y - 8, 50, 16), Qt::AlignRight | Qt::AlignVCenter, QString("%1°C").arg(temp, 0, 'f', 1));
 
-        // 湿度标签（右侧）
+        // 右侧湿度
         int humi = m_maxHumi - (m_maxHumi - m_minHumi) * i / 4.0f;
         painter.setPen(QColor(59, 130, 246));
-        painter.drawText(QRect(50 + width + 8, y - 8, 35, 16), Qt::AlignLeft, QString("%1%").arg(humi));
+        painter.drawText(QRect(margin_left + width + 8, y - 8, 35, 16), Qt::AlignLeft | Qt::AlignVCenter, QString("%1%").arg(humi));
     }
 
     painter.setPen(QPen(QColor(150, 150, 150), 1));
-    painter.drawRect(50, 40, width, height);
+    painter.drawRect(margin_left, margin_top, width, height);
 
     painter.restore();
 }
@@ -353,7 +359,6 @@ void ChartWidget::drawLegend(QPainter& painter, int width, int height)
     painter.restore();
 }
 
-// 空实现（未使用的方法）
 void ChartWidget::drawCurve(QPainter& painter, const QVector<QPointF>& points, const QColor& color)
 {
     Q_UNUSED(painter)

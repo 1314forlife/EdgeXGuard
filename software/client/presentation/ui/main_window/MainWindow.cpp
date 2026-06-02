@@ -11,6 +11,7 @@
 #include "presentation/ui/modules/analytics/AnalyticsPage.h"
 #include "presentation/ui/modules/face_database/FaceDatabasePage.h"
 #include "presentation/ui/modules/perimeter_rules/PerimeterRulesPage.h"
+#include "presentation/ui/modules/device/DeviceManagementWidget.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -86,27 +87,26 @@ void MainWindow::setupCentralArea()
         {"dashboard", 0},
         {"monitor", 1},
         {"analytics", 2},
-        {"face_database", 3},  // 【★替换温度】人脸凭证库
-        {"perimeter_rules", 4},// 【★替换湿度】周界规则引擎
-        {"human", 5},
-        {"device", 6},
+        {"face_database", 3},
+        {"perimeter_rules", 4},
+        {"human", 5},           // ← 人体检测
+        {"device", 6},          // ← 设备管理
         {"alert", 7},
         {"history", 8},
         {"settings", 9}
     };
 
     // 3. 重新组装页面序列
-    m_stackedWidget->addWidget(new DashboardPage(this));                                    // 0: dashboard
-    m_stackedWidget->addWidget(new MonitoringPage(this));                                   // 1: monitor
-    m_stackedWidget->addWidget(new AnalyticsPage(m_detectionService, this));                // 2: analytics
-
-    // 替换原本的温湿度占位页
-    m_stackedWidget->addWidget(new FaceDatabasePage(this));                                  // 3: face_database
-    m_stackedWidget->addWidget(new PerimeterRulesPage(this)); // 4: perimeter_rules
-    m_stackedWidget->addWidget(new PlaceholderPage("设备管理 - 配置摄像头、传感器、执行器")); // 6: device
-    m_stackedWidget->addWidget(new PlaceholderPage("告警中心 - 历史告警记录"));              // 7: alert
-    m_stackedWidget->addWidget(new PlaceholderPage("历史数据 - AI与感知事件历史统计曲线"));   // 8: history
-    m_stackedWidget->addWidget(new PlaceholderPage("系统设置 - 用户配置、网络设置、录像计划")); // 9: settings
+    m_stackedWidget->addWidget(new DashboardPage(this));                          // 0
+    m_stackedWidget->addWidget(new MonitoringPage(this));                         // 1
+    m_stackedWidget->addWidget(new AnalyticsPage(m_detectionService, this));      // 2
+    m_stackedWidget->addWidget(new FaceDatabasePage(this));                       // 3
+    m_stackedWidget->addWidget(new PerimeterRulesPage(this));                     // 4
+    m_stackedWidget->addWidget(new PlaceholderPage("人体检测 - 人体检测结果"));    // 5 ← 添加这一行
+    m_stackedWidget->addWidget(new DeviceManagementWidget(this));                 // 6
+    m_stackedWidget->addWidget(new PlaceholderPage("告警中心 - 历史告警记录"));    // 7
+    m_stackedWidget->addWidget(new PlaceholderPage("历史数据 - 统计曲线"));        // 8
+    m_stackedWidget->addWidget(new PlaceholderPage("系统设置 - 配置"));            // 9
 }
 
 void MainWindow::onModuleChanged(const QString& module)
