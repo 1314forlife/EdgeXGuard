@@ -54,7 +54,7 @@ void ChartWidget::setHumidityData(const QVector<int>& data)
 {
     m_humiData = data;
 
-    // 💡 核心修正 1：绝杀越界野值！用 mid() 代替 first() 进行安全控杀
+    //  核心修正 ：绝杀越界野值！用 mid() 代替 first() 进行安全控杀
     if (!m_humiData.isEmpty()) {
         int printCount = std::min(5, (int)m_humiData.size());
         qDebug() << "setHumidityData - size:" << m_humiData.size()
@@ -234,7 +234,7 @@ void ChartWidget::updatePixmap()
     painter.setFont(titleFont);
     painter.drawText(QRect(margin_left, 8, chartWidth, 25), Qt::AlignCenter, m_title);
 
-    // 💡 核心修正 2：全自动对齐坐标，把外边距传进去控杀坐标偏移
+    // 核心修正 2：全自动对齐坐标，把外边距传进去控杀坐标偏移
     drawGrid(painter, chartWidth, chartHeight);
 
     // ===== 绘制温度曲线 =====

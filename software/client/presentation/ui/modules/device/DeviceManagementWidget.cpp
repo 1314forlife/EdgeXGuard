@@ -1,5 +1,6 @@
 #include "DeviceManagementWidget.h"
 #include "presentation/viewmodel/device/DeviceViewModel.h"
+#include "infrastructure/network/onvif/onvif_client.h"
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QFormLayout>
@@ -8,9 +9,13 @@
 #include <QHeaderView>
 #include <QLabel>
 #include <QPushButton>
+#include <QSlider>      // 新增
+#include <QGridLayout>  // 新增：用于 PTZ 按钮网格布局
 
 DeviceManagementWidget::DeviceManagementWidget(QWidget *parent)
     : QWidget(parent)
+    , m_isMoving(false)
+    , m_ptzTimer(nullptr)
 {
     setupUI();
     loadDevices();
@@ -224,9 +229,285 @@ void DeviceManagementWidget::setupDetailPanel()
         "QPushButton:pressed { background-color: #114692; }"
         );
     detailLayout->addWidget(saveBtn);
+    // ========== 新增：PTZ 控制面板 ==========
+    setupPtzPanel(detailLayout);
+    // ======================================
     detailLayout->addStretch();
 
     m_splitter->addWidget(detailContainer);
+}
+
+// ========== PTZ 控制功能 ==========
+
+void DeviceManagementWidget::setupPtzPanel(QVBoxLayout* detailLayout)
+{
+    QGroupBox* ptzBox = new QGroupBox("云台控制 (PTZ)");
+    ptzBox->setMaximumWidth(550);
+    ptzBox->setStyleSheet(
+        "QGroupBox {"
+        "   background-color: #FFFFFF;"
+        "   border: 1px solid #E5E5E5;"
+        "   border-radius: 8px;"
+        "   margin-top: 16px;"
+        "   padding: 20px 16px 16px 16px;"
+        "   font-weight: 600;"
+        "   color: #212529;"
+        "}"
+        "QGroupBox::title {"
+        "   subcontrol-origin: margin;"
+        "   subcontrol-position: top left;"
+        "   left: 16px;"
+        "   padding: 0 4px;"
+        "}"
+        );
+
+    QVBoxLayout* ptzLayout = new QVBoxLayout(ptzBox);
+
+    // 速度控制行
+    QHBoxLayout* speedLayout = new QHBoxLayout();
+    QLabel* speedLabel = new QLabel("移动速度:");
+    speedLabel->setStyleSheet("font-weight: normal;");
+    m_speedSlider = new QSlider(Qt::Horizontal);
+    m_speedSlider->setRange(10, 100);  // 10% 到 100%
+    m_speedSlider->setValue(30);       // 默认 30%
+    m_speedSlider->setFixedWidth(150);
+    m_speedSlider->setStyleSheet(
+        "QSlider::groove:horizontal {"
+        "   height: 4px;"
+        "   background: #E5E5E5;"
+        "   border-radius: 2px;"
+        "}"
+        "QSlider::handle:horizontal {"
+        "   background: #1A73E8;"
+        "   width: 14px;"
+        "   height: 14px;"
+        "   margin: -5px 0;"
+        "   border-radius: 7px;"
+        "}"
+        );
+    m_speedLabel = new QLabel("0.3");
+    m_speedLabel->setFixedWidth(35);
+    m_speedLabel->setStyleSheet("font-weight: normal; color: #1A73E8;");
+
+    speedLayout->addWidget(speedLabel);
+    speedLayout->addWidget(m_speedSlider);
+    speedLayout->addWidget(m_speedLabel);
+    speedLayout->addStretch();
+
+    // 方向按钮网格
+    QGridLayout* buttonLayout = new QGridLayout();
+    buttonLayout->setSpacing(12);
+    buttonLayout->setContentsMargins(30, 10, 30, 10);
+
+    // 创建方向按钮
+    QPushButton* btnUp = new QPushButton("↑");
+    QPushButton* btnDown = new QPushButton("↓");
+    QPushButton* btnLeft = new QPushButton("←");
+    QPushButton* btnRight = new QPushButton("→");
+    QPushButton* btnStop = new QPushButton("■ 停止");
+    QPushButton* btnHome = new QPushButton("● 回中");
+
+    // 按钮样式
+    QString btnStyle =
+        "QPushButton {"
+        "   background-color: #F1F3F5;"
+        "   border: 1px solid #DEE2E6;"
+        "   border-radius: 6px;"
+        "   font-size: 20px;"
+        "   font-weight: bold;"
+        "   color: #495057;"
+        "   min-width: 60px;"
+        "   min-height: 50px;"
+        "}"
+        "QPushButton:hover {"
+        "   background-color: #E8F0FE;"
+        "   border-color: #1A73E8;"
+        "   color: #1A73E8;"
+        "}"
+        "QPushButton:pressed {"
+        "   background-color: #D2E3FC;"
+        "}";
+
+    QString stopStyle =
+        "QPushButton {"
+        "   background-color: #FFF3E0;"
+        "   border: 1px solid #FFB74D;"
+        "   border-radius: 6px;"
+        "   font-size: 14px;"
+        "   font-weight: bold;"
+        "   color: #E65100;"
+        "   min-width: 60px;"
+        "   min-height: 50px;"
+        "}"
+        "QPushButton:hover {"
+        "   background-color: #FFE0B2;"
+        "}";
+
+    QString homeStyle =
+        "QPushButton {"
+        "   background-color: #E8F5E9;"
+        "   border: 1px solid #66BB6A;"
+        "   border-radius: 6px;"
+        "   font-size: 14px;"
+        "   font-weight: bold;"
+        "   color: #2E7D32;"
+        "   min-width: 60px;"
+        "   min-height: 50px;"
+        "}"
+        "QPushButton:hover {"
+        "   background-color: #C8E6C9;"
+        "}";
+
+    btnUp->setStyleSheet(btnStyle);
+    btnDown->setStyleSheet(btnStyle);
+    btnLeft->setStyleSheet(btnStyle);
+    btnRight->setStyleSheet(btnStyle);
+    btnStop->setStyleSheet(stopStyle);
+    btnHome->setStyleSheet(homeStyle);
+
+    // 布局：上
+    buttonLayout->addWidget(btnUp, 0, 1);
+    // 布局：左、停止、右
+    buttonLayout->addWidget(btnLeft, 1, 0);
+    buttonLayout->addWidget(btnStop, 1, 1);
+    buttonLayout->addWidget(btnRight, 1, 2);
+    // 布局：下、回中
+    buttonLayout->addWidget(btnDown, 2, 1);
+    buttonLayout->addWidget(btnHome, 3, 1);
+
+    ptzLayout->addLayout(speedLayout);
+    ptzLayout->addLayout(buttonLayout);
+
+    detailLayout->addWidget(ptzBox);
+
+    // 连接信号槽
+    connect(m_speedSlider, &QSlider::valueChanged, this, &DeviceManagementWidget::onSpeedChanged);
+
+    // 按钮事件：按下时开始移动，松开时停止
+    connect(btnUp, &QPushButton::pressed, this, &DeviceManagementWidget::onPtzUp);
+    connect(btnUp, &QPushButton::released, this, &DeviceManagementWidget::onPtzStop);
+    connect(btnDown, &QPushButton::pressed, this, &DeviceManagementWidget::onPtzDown);
+    connect(btnDown, &QPushButton::released, this, &DeviceManagementWidget::onPtzStop);
+    connect(btnLeft, &QPushButton::pressed, this, &DeviceManagementWidget::onPtzLeft);
+    connect(btnLeft, &QPushButton::released, this, &DeviceManagementWidget::onPtzStop);
+    connect(btnRight, &QPushButton::pressed, this, &DeviceManagementWidget::onPtzRight);
+    connect(btnRight, &QPushButton::released, this, &DeviceManagementWidget::onPtzStop);
+    connect(btnStop, &QPushButton::clicked, this, &DeviceManagementWidget::onPtzStop);
+    connect(btnHome, &QPushButton::clicked, this, &DeviceManagementWidget::onPtzHome);
+
+    // 初始化定时器（用于自动停止，已通过按钮 released 实现，暂不需要）
+}
+
+void DeviceManagementWidget::onSpeedChanged(int value)
+{
+    double speed = value / 100.0;
+    m_speedLabel->setText(QString::number(speed, 'f', 2));
+}
+
+QString DeviceManagementWidget::getCurrentServiceAddress()
+{
+    QTreeWidgetItem* currentItem = m_deviceTree->currentItem();
+    if (!currentItem) {
+        qDebug() << "[PTZ] 没有选中任何设备";
+        return QString();
+    }
+
+    QString deviceId = currentItem->data(0, Qt::UserRole).toString();
+    if (deviceId.isEmpty()) {
+        qDebug() << "[PTZ] 设备 ID 为空";
+        return QString();
+    }
+
+    auto& vm = DeviceViewModel::instance();
+    QString onvifUrl = vm.getOnvifUrl(deviceId);
+
+    if (onvifUrl.isEmpty()) {
+        qDebug() << "[PTZ] 设备没有 ONVIF 地址，设备ID:" << deviceId;
+        return QString();
+    }
+
+    qDebug() << "[PTZ] 获取到服务地址:" << onvifUrl;
+    return onvifUrl;
+}
+
+void DeviceManagementWidget::onPtzLeft()
+{
+    qDebug() << "[PTZ] 向左转";
+    QString serviceAddress = getCurrentServiceAddress();
+    if (serviceAddress.isEmpty()) {
+        qDebug() << "[PTZ] 未选中设备";
+        return;
+    }
+
+    double speed = m_speedSlider->value() / 100.0;
+    OnvifClient onvif;
+    onvif.setCredentials("admin", "z13312555");
+    onvif.continuousMove(serviceAddress, -speed, 0.0, 0.0);
+}
+
+void DeviceManagementWidget::onPtzRight()
+{
+    qDebug() << "[PTZ] 向右转";
+    QString serviceAddress = getCurrentServiceAddress();
+    if (serviceAddress.isEmpty()) return;
+
+    double speed = m_speedSlider->value() / 100.0;
+    OnvifClient onvif;
+    onvif.setCredentials("admin", "z13312555");
+    onvif.continuousMove(serviceAddress, speed, 0.0, 0.0);
+}
+
+void DeviceManagementWidget::onPtzUp()
+{
+    qDebug() << "[PTZ] 向上转";
+    QString serviceAddress = getCurrentServiceAddress();
+    if (serviceAddress.isEmpty()) return;
+
+    double speed = m_speedSlider->value() / 100.0;
+    OnvifClient onvif;
+    onvif.setCredentials("admin", "z13312555");
+    onvif.continuousMove(serviceAddress, 0.0, speed, 0.0);
+}
+
+void DeviceManagementWidget::onPtzDown()
+{
+    qDebug() << "[PTZ] 向下转";
+    QString serviceAddress = getCurrentServiceAddress();
+    if (serviceAddress.isEmpty()) return;
+
+    double speed = m_speedSlider->value() / 100.0;
+    OnvifClient onvif;
+    onvif.setCredentials("admin", "z13312555");
+    onvif.continuousMove(serviceAddress, 0.0, -speed, 0.0);
+}
+
+void DeviceManagementWidget::onPtzStop()
+{
+    qDebug() << "[PTZ] 停止移动";
+    QString serviceAddress = getCurrentServiceAddress();
+    if (serviceAddress.isEmpty()) return;
+
+    OnvifClient onvif;
+    onvif.setCredentials("admin", "z13312555");
+    onvif.stopMove(serviceAddress);
+}
+
+void DeviceManagementWidget::onPtzHome()
+{
+    qDebug() << "[PTZ] 回中位置";
+    // 回中功能：需要 AbsoluteMove 或持续移动直到回中
+    // 简化实现：先停止，然后发送回中命令（需要根据摄像头能力实现）
+    onPtzStop();
+    // TODO: 实现 AbsoluteMove 回中功能
+}
+
+void DeviceManagementWidget::onPtzMoveTimeout()
+{
+    // 定时器超时自动停止（备用方案）
+    if (m_isMoving) {
+        onPtzStop();
+        m_isMoving = false;
+    }
 }
 
 void DeviceManagementWidget::loadDevices()
