@@ -25,6 +25,11 @@ qrc_*.cpp
 ui_*.h
 
 # 测试日志
-Testing/"software/client/*_backup/" 
-"third_party/models/" 
-"third_party/sherpa-onnx/" 
+Testing/
+
+# 语音模块备份目录
+software/client/*_backup/
+
+# 第三方库
+third_party/models/
+third_party/sherpa-onnx/
