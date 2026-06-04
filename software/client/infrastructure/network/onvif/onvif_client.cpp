@@ -9,8 +9,8 @@
 #include <QCryptographicHash>
 #include <QRandomGenerator>
 #include <QDateTime>
-#include <QEventLoop>     // ✅ 添加这一行
-#include <QtGlobal>       // ✅ 添加这一行（for qBound）
+#include <QEventLoop>
+#include <QtGlobal>
 
 class OnvifClient::Impl {
 public:

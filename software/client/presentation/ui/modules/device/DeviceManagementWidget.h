@@ -7,10 +7,10 @@
 #include <QStackedWidget>
 #include <QLabel>
 #include <QPushButton>
-#include <QSlider>      // 新增：速度滑块
-#include <QTimer>       // 新增：PTZ 持续移动定时器
-#include <QVBoxLayout>      // ✅ 添加这一行
-#include <QGridLayout>      // ✅ 添加这一行（如果用到 QGridLayout）
+#include <QSlider>
+#include <QTimer>
+#include <QVBoxLayout>
+#include <QGridLayout>
 
 class DeviceManagementWidget : public QWidget
 {
@@ -51,7 +51,7 @@ private:
     QTreeWidget* m_deviceTree;
     QStackedWidget* m_detailStack;
 
-    // 新增：PTZ 相关成员
+    //PTZ 相关成员
     QSlider* m_speedSlider;      // 速度滑块 (0.1 - 1.0)
     QLabel* m_speedLabel;        // 速度显示
     QTimer* m_ptzTimer;          // 定时器，实现按住移动、松开停止
