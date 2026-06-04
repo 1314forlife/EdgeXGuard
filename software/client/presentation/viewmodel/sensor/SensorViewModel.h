@@ -23,6 +23,9 @@ public:
 public slots:
     void refresh();
 
+    // 🟢 新增：让网络层能够跨模块把真实的 float 数据砸进来的槽函数
+    void receiveNetworkData(float temperature, float humidity);
+
 signals:
     void dataChanged();
 

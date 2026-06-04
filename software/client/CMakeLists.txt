@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.16)
 project(EdgeXGuardClient)
 
+# ==================== 测试选项 ====================
+option(BUILD_TESTS "Build test applications" OFF)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
@@ -10,18 +13,22 @@ set(CMAKE_AUTOUIC ON)
 # ==================== 📦 重新锁定你原本的 MinGW Qt6 路径 ====================
 set(CMAKE_PREFIX_PATH "C:/Qt/6.11.0/mingw_64")
 
-# 🚀 【核心修正】拿掉原先找不到的特殊组件，加入 Qt 原生解析 ONVIF XML 所需的 Xml 模块
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets Network Xml OpenGL OpenGLWidgets)
+# 【核心修正】拿掉原先找不到的特殊组件，加入 Qt 原生解析 ONVIF XML 所需的 Xml 模块
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets Network Xml OpenGL OpenGLWidgets Multimedia)
 
 # ==================== 第三方库配置 ====================
 set(FFMPEG_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/ffmpeg)
 set(HNSWLIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/hnswlib)
 
-# 🚀 【无缝衔接】你的 msys64/mingw64 库在 MinGW 模式下将 100% 稳定运行，再无符号冲突
+# 【无缝衔接】你的 msys64/mingw64 库在 MinGW 模式下将 100% 稳定运行，再无符号冲突
 set(PAHO_MQTT_INCLUDE_DIR C:/msys64/mingw64/include)
 set(PAHO_MQTT_LIB_DIR C:/msys64/mingw64/lib)
 
-# ❌ gSOAP 和原本自动生成的几万行 ONVIF 代码全部抛弃，这里干干净净！
+# gSOAP 和原本自动生成的几万行 ONVIF 代码全部抛弃，这里干干净净！
+
+# ==================== Sherpa-ONNX 配置 ====================
+#set(SHERPA_ONNX_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/sherpa-onnx)
+
 
 # ==================== 源文件 ====================
 set(SOURCES
@@ -167,7 +174,26 @@ set(RESOURCES
 )
 
 # ==================== 可执行文件 ====================
-add_executable(EdgeXGuardClient ${SOURCES} ${HEADERS} ${RESOURCES})
+add_executable(EdgeXGuardClient ${SOURCES} ${HEADERS} ${RESOURCES}
+    # application/service/voice/VoiceWakeupService.h
+    # application/service/voice/VoiceWakeupService.cpp
+    # application/service/voice/VoiceCommandService.h
+    # application/service/voice/VoiceCommandService.cpp
+    # application/service/voice/VoiceprintManager.h
+    # domain/model/voice/VoiceprintModel.h
+    # domain/model/voice/VoiceCommandMapping.h
+    # domain/repository/IVoiceprintRepository.h
+    # infrastructure/asr/SherpaOnnxEngine.h
+    # infrastructure/asr/SherpaOnnxEngine.cpp
+    # infrastructure/asr/ASRConstants.h
+    # infrastructure/repository_impl/VoiceprintFileRepository.h
+    # core/voice/VoiceCommandMapper.h
+    # core/voice/VoiceCommandMapper.cpp
+    # infrastructure/audio/AudioInputManager.h
+    # infrastructure/audio/AudioInputManager.cpp
+    # infrastructure/audio/AudioOutputManager.h
+    # infrastructure/audio/AudioOutputManager.cpp
+)
 
 # ==================== 包含目录 ====================
 target_include_directories(EdgeXGuardClient PRIVATE
@@ -182,7 +208,12 @@ target_include_directories(EdgeXGuardClient PRIVATE
     ${FFMPEG_DIR}/include
     ${HNSWLIB_DIR}
     ${PAHO_MQTT_INCLUDE_DIR}
+    # ${SHERPA_ONNX_DIR}/include
 )
+
+# target_link_directories(EdgeXGuardClient PRIVATE
+#     ${SHERPA_ONNX_DIR}/lib
+# )
 
 # ==================== 链接库 ====================
 target_link_libraries(EdgeXGuardClient PRIVATE
@@ -192,10 +223,19 @@ target_link_libraries(EdgeXGuardClient PRIVATE
     Qt6::Xml
     Qt6::OpenGL
     Qt6::OpenGLWidgets
+    Qt6::Multimedia
     ${FFMPEG_DIR}/lib/libavcodec.dll.a
     ${FFMPEG_DIR}/lib/libavformat.dll.a
     ${FFMPEG_DIR}/lib/libavutil.dll.a
     ${FFMPEG_DIR}/lib/libswscale.dll.a
     ${PAHO_MQTT_LIB_DIR}/libpaho-mqttpp3.a
     ${PAHO_MQTT_LIB_DIR}/libpaho-mqtt3a.dll.a
+    # ${SHERPA_ONNX_DIR}/lib/sherpa-onnx-c-api.lib
+    -lpthread
+    -static-libgcc -static-libstdc++
 )
+
+# ==================== 测试子目录（可选） ====================
+if(BUILD_TESTS)
+    add_subdirectory(tests)
+endif()

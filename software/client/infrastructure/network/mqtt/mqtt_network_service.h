@@ -5,6 +5,8 @@
 #include <QString>
 #include <QByteArray>
 #include <mqtt/async_client.h>  // 直接包含完整头文件
+#include <QJsonDocument>
+#include <QJsonObject>
 
 class MqttNetworkService : public QObject
 {
@@ -23,6 +25,7 @@ signals:
     void gatewayDisconnected();
     void alarmDataReceived(const QString &topic, const QByteArray &payload);
 
+    void sensorDataUpdated(double temperature, int humidity);
 private:
     class Impl;
     Impl* m_impl;

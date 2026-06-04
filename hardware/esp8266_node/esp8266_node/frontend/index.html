@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EdgeXGuard 边缘计算大盘</title>
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <style>
+        body { background-color: #121212; color: #ffffff; font-family: -apple-system, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+        .card { background: #1e1e1e; border: 2px solid #333; border-radius: 16px; padding: 24px; width: 85%; max-width: 400px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); text-align: center; }
+        h1 { font-size: 20px; color: #00ff66; margin-bottom: 4px; letter-spacing: 1px; }
+        .status { font-size: 12px; color: #888; margin-bottom: 24px; }
+        .data-box { background: #252525; border-radius: 12px; padding: 16px; margin: 12px 0; display: flex; justify-content: space-between; align-items: center; border-left: 5px solid #00bcff; }
+        .data-box.hum { border-left-color: #ffaa00; }
+        .label { font-size: 16px; color: #aaa; }
+        .value { font-size: 32px; font-weight: bold; font-family: monospace; }
+        .unit { font-size: 16px; color: #666; margin-left: 4px; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h1>EdgeXGuard 监控中心</h1>
+        <div id="status" class="status">正在物理连接中转站...</div>
+
+        <div class="data-box">
+            <span class="label">🌡️ 现场温度</span>
+            <div><span id="temp" class="value">--.-</span><span class="unit">°C</span></div>
+        </div>
+
+        <div class="data-box hum">
+            <span class="label">💧 现场湿度</span>
+            <div><span id="hum" class="value">--</span><span class="unit">%</span></div>
+        </div>
+    </div>
+
+    <script>
+        // ─── 🛠️ 核心参数对齐：走 18083 后台管理端口的特殊偷渡通道 ───
+const BROKER_HOST = "192.168.0.102"; // 你的 Rock 5T 物理 IP
+        const BROKER_PORT = 8083;             // 🟢 刚刚用 -p 成功解封的 8083 端口！
+        const USERNAME    = "";               // 匿名模式
+        const PASSWORD    = "";               // 匿名模式
+        const TOPIC       = "EdgeXGuard/esp8266/data";
+
+        // 📡 组装最标准、网页原生支持的 /mqtt 路径
+        const connectUrl = `ws://${BROKER_HOST}:${BROKER_PORT}/mqtt`;
+
+        const options = {
+            clientId: 'Web_Dashboard_' + Math.random().toString(16).substr(2, 8),
+            username: USERNAME,
+            password: PASSWORD,
+            clean: true
+        };
+
+        const statusDiv = document.getElementById('status');
+        const client = mqtt.connect(connectUrl, options);
+
+        // 🤝 握手状态监听
+        client.on('connect', () => {
+            statusDiv.innerHTML = "🟢 已成功接入中转站！正在阻击监听物理数据流...";
+            statusDiv.style.color = "#00ff66";
+            client.subscribe(TOPIC);
+        });
+
+        client.on('error', (err) => {
+            statusDiv.innerHTML = "❌ 撞击网关失败: " + err.message;
+            statusDiv.style.color = "#ff3333";
+        });
+
+        // 🚀 拦截从远端横渡过来的 JSON 快递并当场动态刷到 HTML 标签上
+        client.on('message', (topic, message) => {
+            try {
+                const json = JSON.parse(message.toString());
+                
+                // 精准推送到对应的 HTML 盒子容器中显示
+                document.getElementById('temp').innerText = json.temperature.toFixed(1);
+                document.getElementById('hum').innerText = json.humidity;
+            } catch (e) {
+                console.log("拦截到非法垃圾报文或者数据解析错位");
+            }
+        });
+    </script>
+</body>
+</html>

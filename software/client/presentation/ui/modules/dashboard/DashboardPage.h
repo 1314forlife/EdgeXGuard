@@ -3,7 +3,7 @@
 
 #include <QWidget>
 #include <QLabel>
-#include <QVector>
+#include <QList>
 
 class ChartWidget;
 
@@ -13,29 +13,27 @@ class DashboardPage : public QWidget
 
 public:
     explicit DashboardPage(QWidget *parent = nullptr);
+    ~DashboardPage() = default;
 
 private slots:
+    // 🟢 响应式核心：ViewModel 数据一变，立刻物理刷新此槽
     void updateSensorDisplay();
 
 private:
     void setupUI();
     void createChartCard();
 
-    // 传感器显示
-    QLabel* m_tempLabel;
-    QLabel* m_humidLabel;
-    QLabel* m_pirLabel;
+    // UI 控件指针
+    QLabel* m_tempLabel = nullptr;
+    QLabel* m_humidLabel = nullptr;
+    QLabel* m_pirLabel = nullptr;
+    QLabel* m_fanLabel = nullptr;
+    QLabel* m_lightLabel = nullptr;
+    ChartWidget* m_chartWidget = nullptr;
 
-    // 设备状态
-    QLabel* m_fanLabel;
-    QLabel* m_lightLabel;
-
-    // 图表
-    ChartWidget* m_chartWidget;
-
-    // 历史数据缓存
-    QVector<float> m_tempHistory;
-    QVector<int> m_humiHistory;
+    // 历史时序队列
+    QList<float> m_tempHistory;
+    QList<int>   m_humiHistory;
     int m_maxHistoryPoints;
 };
 
