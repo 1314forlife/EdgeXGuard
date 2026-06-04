@@ -25,4 +25,6 @@ qrc_*.cpp
 ui_*.h
 
 # 测试日志
-Testing/
+Testing/"software/client/*_backup/" 
+"third_party/models/" 
+"third_party/sherpa-onnx/" 
