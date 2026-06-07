@@ -34,3 +34,7 @@ software/client/*_backup/
 third_party/opencv/
 third_party/sherpa-onnx/
 third_party/models/
+
+echo "*.mp4" >> .gitignore
+echo "*.avi" >> .gitignore
+echo "*.mov" >> .gitignore
