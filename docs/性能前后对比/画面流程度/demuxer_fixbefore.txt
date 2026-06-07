@@ -20,40 +20,17 @@ bool Demuxer::open(const QString& url) {
 
     LOG_INFO("Demuxer", QString("open() - URL: %1").arg(url));
 
-    // ==================== 【★核心降延时重构：物理掐灭所有网络缓存】 ====================
-    AVDictionary* options = nullptr;
-
-    // 1. 强行降低 FFmpeg 探测和分析流信息的时间（从默认的 5,000,000 微秒物理阉割到 50,000 微秒）
-    av_dict_set(&options, "probesize", "50000", 0);
-    av_dict_set(&options, "analyzeduration", "50000", 0);
-
-    // 2. 物理掐灭套接字和网络流的全局内部缓存！一有数据包立刻推往下游，绝不囤积！
-    av_dict_set(&options, "fflags", "nobuffer", 0);
-    av_dict_set(&options, "tune", "zerolatency", 0); // 开启硬核零延迟内核模式
-
-    // 3. 强制走 TCP 可靠信道，避免 UDP 默认分包丢包导致解码器花屏卡顿
-    av_dict_set(&options, "rtsp_transport", "tcp", 0);
-
-    // 4. 【额外防空】加入网络接收超时保护（单位：微秒，这里设为 3 秒），防止网络断开时死锁卡死主界面
-    av_dict_set(&options, "stimeout", "3000000", 0);
-
-    // 5. 带着我们配好的零延迟字典，点火打开输入流
-    if (avformat_open_input(&m_formatCtx, url.toStdString().c_str(), nullptr, &options) < 0) {
+    // ==================== 【★大招：扒光所有参数，拒绝画蛇添足】 ====================
+    // 直接传 nullptr，让 FFmpeg 自动根据本地网络环境用最兼容的方式去握手打开
+    if (avformat_open_input(&m_formatCtx, url.toStdString().c_str(), nullptr, nullptr) < 0) {
         LOG_ERROR("Demuxer", "Cannot open file/stream");
         emit sigError("Cannot open file/stream");
-        if (options) av_dict_free(&options); // 异常退出时防内存泄漏
         return false;
     }
-
-    // 6. 打开成功后，必须及时物理释放字典内存
-    if (options) {
-        av_dict_free(&options);
-    }
-    // =================================================================================
+    // =========================================================================
 
     LOG_INFO("Demuxer", "avformat_open_input success");
 
-    // 配合降延时：将探测流信息的参数也传 nullptr，防止它在这一行二次卡顿
     if (avformat_find_stream_info(m_formatCtx, nullptr) < 0) {
         LOG_ERROR("Demuxer", "Cannot find stream info");
         emit sigError("Cannot find stream info");

@@ -1,27 +1,54 @@
 #include "FaceRepositoryImpl.h"
-#include "presentation/viewmodel/face_database/FaceDatabaseViewModel.h"
+#include <QSqlDatabase>
+#include <QSqlQuery>
+#include <QSqlError>
+#include <QDebug>
 
-// 确保返回值、类名作用域、参数类型与头文件完全严丝合缝
+FaceRepositoryImpl::FaceRepositoryImpl() {
+    initializeDatabase(); // 🟢 开机初始化数据库
+}
+
+void FaceRepositoryImpl::initializeDatabase() {
+    if (QSqlDatabase::contains("qt_sql_default_connection")) {
+        return;
+    }
+
+    QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
+    db.setDatabaseName("edgexguard.db");
+
+    if (!db.open()) {
+        qDebug() << "❌ [DB] SQLite 物理开机失败:" << db.lastError().text();
+        return;
+    }
+    qDebug() << "💾 [DB] 成功连接/创建本地物理数据库 (build/edgexguard.db)";
+
+    QSqlQuery query;
+    // 🟢 字段瘦身：只建立实体类里确实存在的核心字段
+    query.exec("CREATE TABLE IF NOT EXISTS face_whitelist ("
+               "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+               "name TEXT, "
+               "work_id TEXT UNIQUE)");
+}
+
 bool FaceRepositoryImpl::addFace(const FaceEntity& face) {
-    qDebug() << "[FaceRepositoryImpl仓储层] 收到录入人脸请求，姓名:" << face.name << "工号:" << face.workId;
-    // 现在的录入流走的是 ViewModel 的内存 QList，底层仓储暂时直接返回真即可。
-    // 未来换真实 SQLite 时，这里就会被替换为标准的 SQL 插入语句。
+    QSqlQuery query;
+
+    // 🟢 严格对接你的结构体：只绑定 name 和 workId
+    query.prepare("INSERT OR REPLACE INTO face_whitelist (name, work_id) VALUES (:name, :work_id)");
+    query.bindValue(":name", face.name);
+    query.bindValue(":work_id", face.workId); // 👈 严格匹配你的结构体变量名
+
+    if (!query.exec()) {
+        qWarning() << "❌ [DB] 物理压盘落库失败！工号:" << face.workId << "报错:" << query.lastError().text();
+        return false;
+    }
+
+    qDebug() << "🎉 [DB] 物理压盘落库大获全胜！姓名:" << face.name << "工号:" << face.workId;
     return true;
 }
 
 std::optional<FaceEntity> FaceRepositoryImpl::searchNearestFace(const std::vector<float>& faceFeature, float threshold) {
-    (void)faceFeature;
-    (void)threshold;
-
-    QString recognizedName = "张三";
-    QString denyReason;
-
-    if (FaceDatabaseViewModel::isUserAllowed(recognizedName, denyReason)) {
-        FaceEntity entity;
-        entity.id = 1;
-        entity.name = recognizedName;
-        entity.workId = "HQ-9527";
-        return entity;
-    }
+    Q_UNUSED(faceFeature);
+    Q_UNUSED(threshold);
     return std::nullopt;
 }

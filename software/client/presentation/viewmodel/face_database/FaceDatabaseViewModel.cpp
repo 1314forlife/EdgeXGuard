@@ -1,18 +1,66 @@
 #include "FaceDatabaseViewModel.h"
 #include <QDateTime>
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonArray>
+#include <QJsonObject>
+#include <QDebug>
 
-// ==================== 【★核心联动：建立中央全局假数据库】 ====================
-// 让整个软件所有模块都能实时访问这同一个白名单数据源
+// ==================== 【★核心联动：建立中央全局数据库（支持硬盘持久化恢复）】 ====================
 static QList<QVariantMap>& getCentralMockDatabase() {
     static QList<QVariantMap> s_database;
+
     if (s_database.isEmpty()) {
+        QString savePath = "face_database.json";
+        QFile file(savePath);
+
+        // 🟢 优先策略：如果本地硬盘存在保存好的数据文件，直接从硬盘恢复数据！
+        if (file.exists() && file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            QByteArray data = file.readAll();
+            file.close();
+
+            QJsonDocument doc = QJsonDocument::fromJson(data);
+            if (doc.isArray()) {
+                QJsonArray jsonArray = doc.array();
+                for (int i = 0; i < jsonArray.size(); ++i) {
+                    s_database.append(jsonArray.at(i).toObject().toVariantMap());
+                }
+                qDebug() << "📂 [Database] 检测到本地持久化文件，成功从硬盘恢复" << s_database.size() << "条记录。";
+                return s_database;
+            }
+        }
+
+        // 🟡 保底策略：如果硬盘没有文件（第一次开机），则使用原本的 3 条初始底座数据
+        qDebug() << "ℹ️ [Database] 未检测到本地存储文件，初始化默认白名单底座。";
         s_database.append({{"id", 1}, {"name", "张三"}, {"workId", "HQ-9527"}, {"privilege", "允许通行"}, {"time", "2026-05-20"}});
         s_database.append({{"id", 2}, {"name", "李四"}, {"workId", "HQ-8848"}, {"privilege", "允许通行"}, {"time", "2026-05-22"}});
         s_database.append({{"id", 3}, {"name", "王五"}, {"workId", "HQ-1024"}, {"privilege", "禁止通行"}, {"time", "2026-05-25"}});
     }
     return s_database;
 }
-// =========================================================================
+
+// 🟢 新增：统一落盘逻辑（将内存中的中央底座矩阵序列化为本地 JSON 文件）
+void FaceDatabaseViewModel::saveToDisk() {
+    QString savePath = "face_database.json";
+    QFile file(savePath);
+
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        qDebug() << "🔴 [Database] 物理落盘失败：无法写入持久化文件！";
+        return;
+    }
+
+    auto& centralDb = getCentralMockDatabase();
+    QJsonArray jsonArray;
+    for (const auto& user : centralDb) {
+        jsonArray.append(QJsonObject::fromVariantMap(user));
+    }
+
+    QJsonDocument doc(jsonArray);
+    file.write(doc.toJson());
+    file.close();
+    qDebug() << "💾 [Database] 数据变动，物理落盘成功！当前文件总记录数:" << centralDb.size();
+}
+// =================================================================================
 
 FaceDatabaseViewModel& FaceDatabaseViewModel::instance() {
     static FaceDatabaseViewModel instance;
@@ -25,7 +73,6 @@ FaceDatabaseViewModel::FaceDatabaseViewModel(QObject* parent) : QAbstractTableMo
 
 void FaceDatabaseViewModel::loadMockData() {
     beginResetModel();
-    // 每次刷新，都去中央底座拿最新的状态
     m_mockDatabase = getCentralMockDatabase();
     endResetModel();
 }
@@ -58,11 +105,9 @@ void FaceDatabaseViewModel::removeUser(int row) {
 
     beginRemoveRows(QModelIndex(), row, row);
 
-    // 【★核心修改】同步把中央全局底座里的这个人也删掉！
     auto& centralDb = getCentralMockDatabase();
     QString deletedName = m_mockDatabase[row]["name"].toString();
 
-    // 根据名字从中央底座彻底抹去
     for(int i = 0; i < centralDb.size(); ++i) {
         if(centralDb[i]["name"].toString() == deletedName) {
             centralDb.removeAt(i);
@@ -70,11 +115,13 @@ void FaceDatabaseViewModel::removeUser(int row) {
         }
     }
 
-    m_mockDatabase.removeAt(row); // 刷新当前 UI 表格
+    m_mockDatabase.removeAt(row);
     endRemoveRows();
+
+    // 🟢 核心改动：删除用户成功后，立刻同步落盘！
+    saveToDisk();
 }
 
-// 供外部智能分析模块调用的全局查询接口
 bool FaceDatabaseViewModel::isUserAllowed(const QString& name, QString& outReason) {
     auto& centralDb = getCentralMockDatabase();
     for (const auto& user : centralDb) {
@@ -89,4 +136,32 @@ bool FaceDatabaseViewModel::isUserAllowed(const QString& name, QString& outReaso
     }
     outReason = "系统白名单库中无此人（凭证已被注销）！";
     return false;
+}
+
+void FaceDatabaseViewModel::addUser(const QString& name, const QString& workId, const QString& imagePath) {
+    Q_UNUSED(imagePath);
+
+    auto& centralDb = getCentralMockDatabase();
+    int newId = centralDb.isEmpty() ? 1 : centralDb.last()["id"].toInt() + 1;
+    int insertRow = m_mockDatabase.size();
+
+    beginInsertRows(QModelIndex(), insertRow, insertRow);
+
+    QVariantMap newUser;
+    newUser["id"] = newId;
+    newUser["name"] = name;
+    newUser["workId"] = workId;
+    newUser["privilege"] = "允许通行";
+    newUser["time"] = QDateTime::currentDateTime().toString("yyyy-MM-dd");
+
+    centralDb.append(newUser);
+    m_mockDatabase.append(newUser);
+
+    endInsertRows();
+
+    qDebug() << "🎉 [ViewModel] 成功往中央全局白名单库追加用户！姓名:" << name
+             << " | 分配ID:" << newId << " | 当前总数:" << centralDb.size();
+
+    // 🟢 核心改动：新增用户成功后，立刻同步落盘！
+    saveToDisk();
 }

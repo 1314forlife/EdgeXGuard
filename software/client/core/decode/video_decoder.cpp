@@ -1,3 +1,30 @@
+#ifdef __MINGW32__
+#include <pthread.h>
+#include <sys/time.h>
+#include <errno.h>
+
+// 🟢 核心黑客技术：强行将系统底层真正的 32位 纯净符号，绑定到我们自定义的 real_ 别名上！
+// 这样可以彻底打断编译器的符号混淆，100% 杜绝函数自我套娃、递归卡死、栈溢出的惨剧！
+extern "C" int real_pthread_cond_timedwait(pthread_cond_t *, pthread_mutex_t *, const struct timespec *) __asm__("pthread_cond_timedwait");
+
+extern "C" int pthread_cond_timedwait64(pthread_cond_t *cv,
+                                        pthread_mutex_t *external_mutex,
+                                        const struct _timespec64 *t)
+{
+    if (!cv || !external_mutex || !t) {
+        return EINVAL;
+    }
+
+    struct timespec ts32;
+    ts32.tv_sec = static_cast<time_t>(t->tv_sec);
+    ts32.tv_nsec = static_cast<long>(t->tv_nsec);
+
+    // 🟢 调用绝对不会翻车的、真正的底层 32位 通道
+    return real_pthread_cond_timedwait(cv, external_mutex, &ts32);
+}
+#endif
+// --------------------------------------------------------------------------------
+
 #include "video_decoder.h"
 #include "core/common/logger.h"
 #include <QThread>
@@ -95,19 +122,35 @@ void VideoDecoder::run()
     int totalFrames = 0;
     int skippedPackets = 0;
 
+    // 🟢 精妙改动一：等待第一个数据包，给上游拉流留出3秒缓冲
+    int waitCount = 0;
+    while (m_packetQueue->size() == 0 && m_running && waitCount < 300) {
+        QThread::msleep(10);
+        waitCount++;
+    }
+
+    if (m_packetQueue->size() == 0) {
+        LOG_ERROR("VideoDecoder", "No packets received after 3 seconds, exiting");
+        return;
+    }
+
+    LOG_INFO("VideoDecoder", QString("Starting decode, queue size: %1").arg(m_packetQueue->size()));
+
     while (m_running) {
         Packet packet;
-        if (!m_packetQueue->popWait(packet, 10)) {
+
+        // 🟢 精妙改动二：100ms 超时，彻底把条件变量高频调用的性能手刹拉掉
+        if (!m_packetQueue->popWait(packet, 100)) {
+            // 超时没有数据，检查是否还在运行
+            if (m_running && m_packetQueue->size() == 0) {
+                // 🟢 精妙改动三：持续为空时挂起，绝不盲目轮询
+                QThread::msleep(10);
+            }
             continue;
         }
 
         totalPackets++;
         AVPacket* pkt = packet.get();
-
-        if (totalPackets % 100 == 0) {
-            LOG_DEBUG("VideoDecoder", QString("Received packet #%1, queue size: %2")
-                          .arg(totalPackets).arg(m_packetQueue->size()));
-        }
 
         if (!hasKeyFrame) {
             if (pkt->flags & AV_PKT_FLAG_KEY) {
@@ -128,7 +171,7 @@ void VideoDecoder::run()
         while (m_running) {
             int ret = avcodec_receive_frame(m_codecCtx, m_frame);
             if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF) {
-                break; // 需要更多输入包，或者已经解码完毕
+                break;
             }
             if (ret < 0) {
                 LOG_WARN("VideoDecoder", "receive_frame failed");
@@ -142,13 +185,11 @@ void VideoDecoder::run()
             }
 
             FrameData frame = FrameData::fromAVFrame(m_frame, pts);
-
-            // 核心修复 2：复用 m_frame 结构体，清除数据缓存引用，解决内存泄漏！
             av_frame_unref(m_frame);
 
-            // 核心修复 3：如果输出队列满了，休眠等待渲染线程消费，绝不丢弃画面！
+            // 🟢 精妙改动四：5ms 级灵敏等待，画面流畅度全开
             while (m_outputQueue->size() >= 30 && m_running) {
-                QThread::msleep(10);
+                QThread::msleep(5);
             }
 
             if (m_running) {

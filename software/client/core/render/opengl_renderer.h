@@ -6,6 +6,7 @@
 #include <QOpenGLShaderProgram>
 #include <QOpenGLTexture>
 #include "core/common/frame.h"
+#include <QMutex>
 
 class OpenGLRenderer : public QOpenGLWidget, protected QOpenGLFunctions
 {
@@ -24,6 +25,8 @@ protected:
     void resizeGL(int w, int h) override;
 
 private:
+    QMutex m_mutex;            // #include <QMutex> 别忘了加在头文件顶部
+    FrameData m_currentFrame;  // 用来暂存子线程丢过来的最新一帧数据
     void initShaders();
     void initTextures(int width, int height);  // 改为带参数
     void updateTextures(const FrameData& frame);

@@ -30,6 +30,7 @@ Testing/
 # 语音模块备份目录
 software/client/*_backup/
 
-# 第三方库
-third_party/models/
+# 第三方库（体积大，不提交）
+third_party/opencv/
 third_party/sherpa-onnx/
+third_party/models/
