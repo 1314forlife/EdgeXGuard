@@ -46,4 +46,4 @@ software/client/data/*.bin
 
 # FFmpeg 大文件
 third_party/ffmpeg/bin/*.dll
-third_party/ffmpeg/lib/*.dll.a
+third_party/ffmpeg/lib/*.dll.a"software/data/" 
