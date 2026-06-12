@@ -1,0 +1,2 @@
+# EdgeXGuard
+base_on_rk3588EdgeXGuardProject
