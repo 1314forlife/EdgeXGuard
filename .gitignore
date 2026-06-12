@@ -40,4 +40,5 @@ echo "*.avi" >> .gitignore
 echo "*.mov" >> .gitignore
 
 software/client/data/*.db
-software/client/data/*.bin
+software/client/data/*.bin"third_party/ffmpeg/bin/*.dll" 
+"third_party/ffmpeg/lib/*.dll.a" 
