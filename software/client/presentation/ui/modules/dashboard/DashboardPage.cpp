@@ -131,7 +131,7 @@ void DashboardPage::updateSensorDisplay()
         m_pirLabel->setStyleSheet("font-size: 24px; font-weight: bold; color: #888;");
     }
 
-    // 2. 🟢 剥离纯数值并打入历史波形队列
+    // 2.  剥离纯数值并打入历史波形队列
     QString pureTemp = tempStr.toUpper().replace("°C", "").trimmed();
     QString pureHumi = humiStr.replace("%", "").trimmed();
 

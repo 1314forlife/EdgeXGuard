@@ -38,3 +38,6 @@ third_party/models/
 echo "*.mp4" >> .gitignore
 echo "*.avi" >> .gitignore
 echo "*.mov" >> .gitignore
+
+software/client/data/*.db
+software/client/data/*.bin

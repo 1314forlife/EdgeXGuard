@@ -50,3 +50,27 @@ int mqtt_pack_publish(uint8_t *buf, const char *topic, const char *payload) {
     buf[1] = (ptr - buf) - 2;
     return (ptr - buf);
 }
+
+int mqtt_pack_subscribe(uint8_t *buf, const char *topic) {
+    uint8_t *ptr = buf;
+    int topic_len = strlen(topic);
+
+    *ptr++ = 0x82; // MQTT Control Packet Type: SUBSCRIBE
+    ptr++;         // 留出 Remaining Length
+
+    // Packet Identifier (必须设置，比如设为 0x0001)
+    *ptr++ = 0x00; *ptr++ = 0x01;
+
+    // 载荷 (Topic Filter)
+    *ptr++ = (topic_len >> 8) & 0xFF;
+    *ptr++ = topic_len & 0xFF;
+    memcpy(ptr, topic, topic_len);
+    ptr += topic_len;
+
+    // Requested QoS (设为 0)
+    *ptr++ = 0x00;
+
+    // 回填剩余长度
+    buf[1] = (ptr - buf) - 2;
+    return (ptr - buf);
+}

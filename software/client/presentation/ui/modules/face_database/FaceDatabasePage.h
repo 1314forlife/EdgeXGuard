@@ -4,6 +4,9 @@
 #include <QWidget>
 #include <QTableView>
 #include <QPushButton>
+#include <QCheckBox>
+#include <QTableView>
+#include <QLabel>
 
 class FaceDatabasePage : public QWidget {
     Q_OBJECT
@@ -17,6 +20,9 @@ private:
     QPushButton* m_deleteBtn;
     QPushButton* m_refreshBtn;
     QPushButton* m_captureBtn;
+
+    QCheckBox* m_hnswCheckBox = nullptr;
+    QLabel* m_performanceLabel = nullptr;
 };
 
 #endif // FACE_DATABASE_PAGE_H

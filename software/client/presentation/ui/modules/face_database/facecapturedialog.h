@@ -15,6 +15,10 @@
 #include <QVideoSink>
 #include <QVideoFrame>
 
+#include <opencv2/core.hpp>
+#include <opencv2/imgproc.hpp>
+#include <opencv2/objdetect.hpp>
+
 class FaceCaptureDialog : public QDialog
 {
     Q_OBJECT
@@ -36,6 +40,10 @@ private:
     QLineEdit *m_workIdEdit;
     QPushButton *m_saveButton;
     QPushButton *m_cancelButton;
+
+    cv::Mat m_bestFaceROI;
+    cv::Rect m_bestFaceRect;
+    QString m_bestFaceQualityReason;
 
     // 🟢 摄像头控制三件套
     QCamera* m_camera;
