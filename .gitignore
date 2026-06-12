@@ -35,10 +35,15 @@ third_party/opencv/
 third_party/sherpa-onnx/
 third_party/models/
 
-echo "*.mp4" >> .gitignore
-echo "*.avi" >> .gitignore
-echo "*.mov" >> .gitignore
+# 视频文件
+*.mp4
+*.avi
+*.mov
 
+# 数据库文件
 software/client/data/*.db
-software/client/data/*.bin"third_party/ffmpeg/bin/*.dll" 
-"third_party/ffmpeg/lib/*.dll.a" 
+software/client/data/*.bin
+
+# FFmpeg 大文件
+third_party/ffmpeg/bin/*.dll
+third_party/ffmpeg/lib/*.dll.a
