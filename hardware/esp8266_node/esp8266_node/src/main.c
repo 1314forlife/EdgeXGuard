@@ -163,13 +163,18 @@ void v_mqtt_broker_task(void *pvParameters) {
                 }
 
                 // 🚀 触发人脸识别成功逻辑
-                if (found_open) {
-                    printf("\n===============================================\n");
-                    printf("[EdgeXGuard] 🎉 人脸识别成功！触发开门逻辑！\n");
-                    printf("===============================================\n\n");
+               if (found_open) {
+                        printf("\n===============================================\n");
+                        printf("[EdgeXGuard] 🎉 人脸识别成功！触发开门逻辑！\n");
+                        printf("===============================================\n\n");
+    
+                        // 🚀 开门动作
+                        servo_set_state(1);                         // 开门
+                        vTaskDelay(3000 / portTICK_RATE_MS);        // 保持开门 3 秒
+                        servo_set_state(0);                         // 关门
+                    }
                 }
             }
-        }
 
         // 任务喘息，防止 CPU 过载
         vTaskDelay(50 / portTICK_RATE_MS); 
