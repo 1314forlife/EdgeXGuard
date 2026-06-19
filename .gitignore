@@ -47,3 +47,10 @@ software/client/data/*.bin
 # FFmpeg 大文件
 third_party/ffmpeg/bin/*.dll
 third_party/ffmpeg/lib/*.dll.a"software/data/" 
+
+# 本地数据库
+software/data/
+
+# SIP 第三方库（编译后的源码，不提交）
+software/server/3rdparty/exosip/
+software/server/3rdparty/osip/
