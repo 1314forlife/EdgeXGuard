@@ -35,3 +35,15 @@
 #define OUTPUT_FPS 30
 
 #endif // CONFIG_H
+
+// ==========================================
+// GB28181 国标接入配置
+// ==========================================
+#define ENABLE_GB28181 1   // 1: 启用, 0: 禁用
+
+#ifdef ENABLE_GB28181
+    #define GB28181_SERVER_IP   "192.168.0.102"
+    #define GB28181_SERVER_PORT 5060
+    #define GB28181_DEVICE_ID   "34020000001320000001"
+    #define GB28181_PASSWORD    "123456"
+#endif

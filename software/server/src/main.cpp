@@ -8,6 +8,10 @@
 #include <vector>
 #include <cstring>
 
+#ifdef ENABLE_GB28181
+#include "gb28181/sip_client.h"
+#endif
+
 static int g_frame_count = 0;
 
 std::string getFilenameWithoutExt(const std::string& filepath) {
@@ -54,6 +58,10 @@ void onFrameReceived(GstSample* sample, gpointer user_data) {
         std::cout << "Haar cascade loaded: " << loaded << std::endl;
     }
     
+    // 🚀 开门冷却控制
+    static bool door_opened = false;
+    static time_t last_open_time = 0;
+    
     if (loaded) {
         cv::Mat gray;
         cv::cvtColor(cloned_frame, gray, cv::COLOR_BGR2GRAY);
@@ -79,6 +87,20 @@ void onFrameReceived(GstSample* sample, gpointer user_data) {
                 color = cv::Scalar(0, 0, 255);  // 红色
             } else {
                 color = cv::Scalar(0, 255, 0);  // 绿色
+                
+                // 🚀 识别到已注册人脸，发送开门指令（10秒冷却）
+                time_t now = time(nullptr);
+                if (!door_opened || (now - last_open_time > 10)) {
+                    // 发送 MQTT 开门指令
+                    int ret = system("mosquitto_pub -h 127.0.0.1 -t EdgeXGuard/esp8266/cmd -m open");
+                    if (ret == 0) {
+                        std::cout << "🚪 [开门] 已发送开门指令到 ESP8266" << std::endl;
+                        door_opened = true;
+                        last_open_time = now;
+                    } else {
+                        std::cerr << "❌ [开门] MQTT 指令发送失败" << std::endl;
+                    }
+                }
             }
             
             cv::rectangle(cloned_frame, face, color, 3);
@@ -173,9 +195,46 @@ int main(int argc, char* argv[]) {
     pipeline.start();
     std::cout << "✅ 系统就绪，人脸识别引擎已上线！" << std::endl;
     
+    // ==========================================
+    // GB28181 国标接入（可选开关）
+    // ==========================================
+#ifdef ENABLE_GB28181
+    std::cout << "🔗 GB28181 国标模块已启用" << std::endl;
+    
+    SipClient gb28181;
+    if (gb28181.init()) {
+        std::cout << "✅ GB28181 初始化成功" << std::endl;
+        
+        if (gb28181.registerToServer(
+                GB28181_SERVER_IP, 
+                GB28181_SERVER_PORT,
+                GB28181_DEVICE_ID, 
+                GB28181_PASSWORD)) {
+            std::cout << "✅ GB28181 注册成功" << std::endl;
+            gb28181.setKeepAliveInterval(30);
+            gb28181.startKeepAlive();
+        } else {
+            std::cout << "❌ GB28181 注册失败" << std::endl;
+        }
+    } else {
+        std::cout << "❌ GB28181 初始化失败" << std::endl;
+    }
+#else
+    std::cout << "⏸️ GB28181 国标模块已禁用" << std::endl;
+#endif
+
+    // ==========================================
+    // 运行主循环
+    // ==========================================
     pipeline.run();
     
+    // 退出清理
     pipeline.stop();
+    
+#ifdef ENABLE_GB28181
+    gb28181.stopKeepAlive();
+    gb28181.unregister();
+#endif
     
     std::cout << "👋 程序正常退出" << std::endl;
     return 0;

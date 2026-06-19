@@ -45,6 +45,7 @@ set(SOURCES
     src/gst_pipeline.cpp
     # rknn_inference.cpp 暂时不用，先注释掉
     # src/rknn_inference.cpp
+    src/gb28181/sip_client.cpp
 )
 
 # ----------------------------------------------------------------------------
@@ -54,6 +55,7 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/gb28181
     ${GST_INCLUDE_DIRS}
     ${OPENCV_INCLUDE_DIRS}
     ${RKNN_INCLUDE_DIR}
@@ -69,6 +71,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     ${OPENCV_LIBRARIES}
     opencv_face          # 添加 LBPH 人脸识别模块
     ${RKNN_LIBRARY}
+    /usr/local/lib/libosip2.so      # 🆕
+    /usr/local/lib/libeXosip2.so    # 🆕
     pthread
     dl
 )
