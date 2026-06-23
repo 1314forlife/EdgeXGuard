@@ -150,11 +150,6 @@ EdgeXGuard/
     libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev \
     libosip2-dev libexosip2-dev
 
-明白你的意思了，你现在遇到的问题是：在普通的 Markdown 文本中，如果不使用表格（Table），这一大段文字就会挤成一团，缺乏视觉层级，非常不便于阅读。
-
-如果不想用表格，而是直接用纯文字/列表的方式排版，我们应当引入清晰的标题层级、粗体强调、代码块缩进以及分割线。
-
-以下是为你优化后的纯文字版排版方案，直接复制即可无缝嵌入你的 README.md：
 
 2. 自建第三方库依赖拓扑与编译规范
 请在项目的 third_party/（或 3rdparty/）目录下，依次克隆并完成以下核心组件的本地编译与路径链接：
